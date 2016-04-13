@@ -17,7 +17,6 @@
 package org.apache.nifi.processors.debugging;
 
 import org.apache.nifi.components.PropertyDescriptor;
-import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.components.Validator;
@@ -34,7 +33,6 @@ import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processor.util.StandardValidators;
 
 import java.util.*;
 
@@ -95,7 +93,7 @@ public class FlowDebugger extends AbstractProcessor {
             .defaultValue("10")
             .addValidator(percentValidator)
             .build();
-    public static final PropertyDescriptor ROLLBACK_PENALIZE_PERCENT = new PropertyDescriptor.Builder()
+    public static final PropertyDescriptor PENALIZE_PERCENT = new PropertyDescriptor.Builder()
             .name("Rollback Penalize Percent")
             .description("Percentage of flowfiles that should be rolled back with penalization.")
             .required(true)
@@ -110,17 +108,6 @@ public class FlowDebugger extends AbstractProcessor {
     protected Integer FAILURE_CUTOFF = 0;
     protected Integer YIELD_CUTOFF = 0;
     protected Integer ROLLBACK_CUTOFF = 0;
-
-//    @Override
-//    protected void init(final ProcessorInitializationContext context) {
-//        final List<PropertyDescriptor> descriptors = new ArrayList<PropertyDescriptor>();
-//        descriptors.add(MY_PROPERTY);
-//        this.descriptors = Collections.unmodifiableList(descriptors);
-//
-//        final Set<Relationship> relationships = new HashSet<Relationship>();
-//        relationships.add(MY_RELATIONSHIP);
-//        this.relationships = Collections.unmodifiableSet(relationships);
-//    }
 
     @Override
     public Set<Relationship> getRelationships() {
@@ -140,7 +127,7 @@ public class FlowDebugger extends AbstractProcessor {
             propList.add(FAILURE_PERCENT);
             propList.add(YIELD_PERCENT);
             propList.add(ROLLBACK_PERCENT);
-            propList.add(ROLLBACK_PENALIZE_PERCENT);
+            propList.add(PENALIZE_PERCENT);
             propertyDescriptors = Collections.unmodifiableList(propList);
         }
         return propertyDescriptors;
@@ -156,13 +143,13 @@ public class FlowDebugger extends AbstractProcessor {
         Collection<ValidationResult> results = new HashSet<>();
         results.add(new ValidationResult.Builder()
                 .subject("Total percentages")
-                .explanation("The sum of the \"Success Percent\", \"Failure Percent\", and "
+                .explanation("the sum of the \"Success Percent\", \"Failure Percent\", and "
                         + "\"Rollback Percent\" values must total 100.")
                 .valid(context.getProperty(SUCCESS_PERCENT).asInteger()
                         + context.getProperty(FAILURE_PERCENT).asInteger()
                         + context.getProperty(YIELD_PERCENT).asInteger()
                         + context.getProperty(ROLLBACK_PERCENT).asInteger()
-                        + context.getProperty(ROLLBACK_PENALIZE_PERCENT).asInteger() == 100)
+                        + context.getProperty(PENALIZE_PERCENT).asInteger() == 100)
                 .build());
         return results;
     }
