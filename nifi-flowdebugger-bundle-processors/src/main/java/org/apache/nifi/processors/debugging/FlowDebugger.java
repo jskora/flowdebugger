@@ -69,35 +69,42 @@ public class FlowDebugger extends AbstractProcessor {
             .name("Success Percent")
             .description("Percentage of flowfiles that should be forwarded to success relationship.")
             .required(true)
-            .defaultValue("50")
+            .defaultValue("100")
             .addValidator(percentValidator)
             .build();
     public static final PropertyDescriptor FAILURE_PERCENT = new PropertyDescriptor.Builder()
             .name("Failure Percent")
             .description("Percentage of flowfiles that should be forwarded to failure relationship.")
             .required(true)
-            .defaultValue("15")
+            .defaultValue("0")
             .addValidator(percentValidator)
             .build();
     public static final PropertyDescriptor YIELD_PERCENT = new PropertyDescriptor.Builder()
             .name("Yield Percent")
             .description("Percentage of flowfiles that should result in the processor yielding.")
             .required(true)
-            .defaultValue("15")
+            .defaultValue("0")
             .addValidator(percentValidator)
             .build();
     public static final PropertyDescriptor ROLLBACK_PERCENT = new PropertyDescriptor.Builder()
             .name("Rollback Percent")
             .description("Percentage of flowfiles that should be rolled back.")
             .required(true)
-            .defaultValue("10")
+            .defaultValue("0")
             .addValidator(percentValidator)
             .build();
     public static final PropertyDescriptor PENALIZE_PERCENT = new PropertyDescriptor.Builder()
             .name("Rollback Penalize Percent")
             .description("Percentage of flowfiles that should be rolled back with penalization.")
             .required(true)
-            .defaultValue("10")
+            .defaultValue("0")
+            .addValidator(percentValidator)
+            .build();
+    public static final PropertyDescriptor EXCEPTION_PERCENT = new PropertyDescriptor.Builder()
+            .name("Exception Percent")
+            .description("Percentage of flowfiles that should throw unhandled exception.")
+            .required(true)
+            .defaultValue("0")
             .addValidator(percentValidator)
             .build();
 
@@ -108,6 +115,7 @@ public class FlowDebugger extends AbstractProcessor {
     protected Integer FAILURE_CUTOFF = 0;
     protected Integer YIELD_CUTOFF = 0;
     protected Integer ROLLBACK_CUTOFF = 0;
+    protected Integer PENALIZE_CUTOFF = 0;
 
     @Override
     public Set<Relationship> getRelationships() {
@@ -128,6 +136,7 @@ public class FlowDebugger extends AbstractProcessor {
             propList.add(YIELD_PERCENT);
             propList.add(ROLLBACK_PERCENT);
             propList.add(PENALIZE_PERCENT);
+            propList.add(EXCEPTION_PERCENT);
             propertyDescriptors = Collections.unmodifiableList(propList);
         }
         return propertyDescriptors;
@@ -149,7 +158,8 @@ public class FlowDebugger extends AbstractProcessor {
                         + context.getProperty(FAILURE_PERCENT).asInteger()
                         + context.getProperty(YIELD_PERCENT).asInteger()
                         + context.getProperty(ROLLBACK_PERCENT).asInteger()
-                        + context.getProperty(PENALIZE_PERCENT).asInteger() == 100)
+                        + context.getProperty(PENALIZE_PERCENT).asInteger()
+                        + context.getProperty(EXCEPTION_PERCENT).asInteger() == 100)
                 .build());
         return results;
     }
@@ -160,6 +170,7 @@ public class FlowDebugger extends AbstractProcessor {
         FAILURE_CUTOFF = context.getProperty(FAILURE_PERCENT).asInteger() + SUCCESS_CUTOFF;
         YIELD_CUTOFF = context.getProperty(YIELD_PERCENT).asInteger() + FAILURE_CUTOFF;
         ROLLBACK_CUTOFF = context.getProperty(ROLLBACK_PERCENT).asInteger() + YIELD_CUTOFF;
+        PENALIZE_CUTOFF = context.getProperty(PENALIZE_PERCENT).asInteger() + ROLLBACK_CUTOFF;
     }
 
     @Override
@@ -174,33 +185,38 @@ public class FlowDebugger extends AbstractProcessor {
         final int i = (int)(Math.random() * 100.0);
         if (i <= SUCCESS_CUTOFF) {
             logger.info("FlowDebugger transferring to success file={} UUID={}",
-                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.name()),
-                            ff.getAttribute(CoreAttributes.UUID.name())});
+                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.key()),
+                            ff.getAttribute(CoreAttributes.UUID.key())});
             session.transfer(ff, REL_SUCCESS);
             session.commit();
         } else if (i <= FAILURE_CUTOFF) {
             logger.info("FlowDebugger transferring to failure file={} UUID={}",
-                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.name()),
-                            ff.getAttribute(CoreAttributes.UUID.name())});
+                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.key()),
+                            ff.getAttribute(CoreAttributes.UUID.key())});
             session.transfer(ff, REL_FAILURE);
             session.commit();
         } else if (i <= YIELD_CUTOFF) {
             logger.info("FlowDebugger yielding file={} UUID={}",
-                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.name()),
-                            ff.getAttribute(CoreAttributes.UUID.name())});
+                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.key()),
+                            ff.getAttribute(CoreAttributes.UUID.key())});
             context.yield();
         } else if (i <= ROLLBACK_CUTOFF) {
             logger.info("FlowDebugger rolling back (no penalty) file={} UUID={}",
-                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.name()),
-                            ff.getAttribute(CoreAttributes.UUID.name())});
+                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.key()),
+                            ff.getAttribute(CoreAttributes.UUID.key())});
             session.rollback();
             session.commit();
-        } else {
-            logger.info("FlowDebugger rolling back (penalty) file={} UUID={}",
-                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.name()),
-                            ff.getAttribute(CoreAttributes.UUID.name())});
+        } else if (i <= PENALIZE_CUTOFF) {
+            logger.info("FlowDebugger rolling back (with penalty) file={} UUID={}",
+                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.key()),
+                            ff.getAttribute(CoreAttributes.UUID.key())});
             session.rollback(true);
             session.commit();
+        } else {
+            logger.info("FlowDebugger throwing NPE file={} UUID={}",
+                    new Object[]{ff.getAttribute(CoreAttributes.FILENAME.key()),
+                            ff.getAttribute(CoreAttributes.UUID.key())});
+            throw new NullPointerException("forced by " + this.getClass().getName());
         }
     }
 }

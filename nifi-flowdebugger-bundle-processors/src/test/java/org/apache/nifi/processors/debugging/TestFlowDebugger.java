@@ -200,22 +200,30 @@ public class TestFlowDebugger {
         runner.assertValid();
 
         Map<String, String> attribs1 = new HashMap<>();
-        final byte[] content1 = "Hello, World 1!".getBytes();
-        attribs1.put(CoreAttributes.FILENAME.name(), "testFile1.txt");
-        attribs1.put(CoreAttributes.UUID.name(), "TESTING-1234-TESTING");
-        runner.enqueue(content1, attribs1);
+        final String content1 = "Hello, World 1!";
+        final String filename1 = "testFile1.txt";
+        attribs1.put(CoreAttributes.FILENAME.key(), filename1);
+        attribs1.put(CoreAttributes.UUID.key(), "TESTING-1234-TESTING");
+        runner.enqueue(content1.getBytes(), attribs1);
 
         Map<String, String> attribs2 = new HashMap<>();
-        final byte[] content2 = "Hello, World 2!".getBytes();
-        attribs2.put(CoreAttributes.FILENAME.name(), "testFile2.txt");
-        attribs2.put(CoreAttributes.UUID.name(), "TESTING-2345-TESTING");
+        final String content2 = "Hello, World 2!";
+        final String filename2 = "testFile2.txt";
+        attribs2.put(CoreAttributes.FILENAME.key(), filename2);
+        attribs2.put(CoreAttributes.UUID.key(), "TESTING-2345-TESTING");
         runner.enqueue(content2, attribs2);
 
         Map<String, String> attribs3 = new HashMap<>();
-        final byte[] content3 = "Hello, World 3!".getBytes();
-        attribs3.put(CoreAttributes.FILENAME.name(), "testFile3.txt");
-        attribs3.put(CoreAttributes.UUID.name(), "TESTING-3456-TESTING");
-        runner.enqueue(content3, attribs3);
+        final String content3 = "Hello, World 3!";
+        final String filename3 = "testFile3.txt";
+        attribs1.put(CoreAttributes.FILENAME.key(), filename3);
+        attribs3.put(CoreAttributes.UUID.key(), "TESTING-3456-TESTING");
+        runner.enqueue(content3.getBytes(), attribs3);
+
+        Map<String, String> namesToContent = new HashMap<>();
+        namesToContent.put(filename1, content1);
+        namesToContent.put(filename2, content2);
+        namesToContent.put(filename3, content3);
 
         runner.run(4);
         runner.assertTransferCount(FlowDebugger.REL_SUCCESS, 0);
@@ -226,7 +234,8 @@ public class TestFlowDebugger {
 
         MockFlowFile ff1 = (MockFlowFile)session.get();
         assertNotNull(ff1);
-        assertEquals(content1, ff1.toByteArray());
+        assertEquals(namesToContent.get(ff1.getAttribute(CoreAttributes.FILENAME.key())), new String(ff1.toByteArray()));
+        session.rollback();
 
         runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "100");
         runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "0");
