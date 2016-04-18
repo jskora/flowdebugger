@@ -16,7 +16,6 @@
  */
 package org.apache.nifi.processors.debugging;
 
-import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
@@ -32,8 +31,6 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 
 public class TestFlowDebugger {
 
@@ -42,203 +39,81 @@ public class TestFlowDebugger {
     private ProcessContext context;
     private ProcessSession session;
 
+    final String content1 = "Hello, World 1!";
+    final String filename1 = "testFile1.txt";
+    final String content2 = "Hello, World 2!";
+    final String filename2 = "testFile2.txt";
+    final String content3 = "Hello, World 3!";
+    final String filename3 = "testFile3.txt";
+
+    Map<String, String> attribs1 = new HashMap<>();
+    Map<String, String> attribs2 = new HashMap<>();
+    Map<String, String> attribs3 = new HashMap<>();
+    Map<String, String> namesToContent = new HashMap<>();
+
     @Before
     public void setup() throws IOException {
         flowDebugger = new FlowDebuggerInspectable();
         runner = TestRunners.newTestRunner(flowDebugger);
         context = runner.getProcessContext();
         session = runner.getProcessSessionFactory().createSession();
-    }
 
-    @Test
-    public void testGetSupportedPropertyDescriptors() throws Exception {
-
-    }
-
-    @Test
-    public void testGetRelationships() throws Exception {
-
-    }
-
-    @Test
-    public void testCustomValidate() throws Exception {
-        runner.assertValid();
-
-        // valid combinations
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "100");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "0");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "0");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "0");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "0");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "0");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "100");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "0");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "0");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "0");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "0");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "0");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "100");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "0");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "0");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "0");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "0");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "0");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "100");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "0");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "0");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "0");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "0");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "0");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "100");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "60");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "10");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "10");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "10");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "10");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "10");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "60");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "10");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "10");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "10");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "10");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "10");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "60");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "10");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "10");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "10");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "10");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "10");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "60");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "10");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "10");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "10");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "10");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "10");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "60");
-        runner.assertValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "80");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "10");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "0");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "8");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "2");
-        runner.assertValid();
-
-        // invalid combitions
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "0");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "0");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "0");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "0");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "0");
-        runner.assertNotValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "10");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "10");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "10");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "10");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "10");
-        runner.assertNotValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "100");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "100");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "100");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "100");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "100");
-        runner.assertNotValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "80");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "10");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "0");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "8");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "1");
-        runner.assertNotValid();
-
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "80");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "10");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "0");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "8");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "3");
-        runner.assertNotValid();
-    }
-
-    @Test
-    public void testOnScheduled() throws Exception {
-        assertEquals(0L, flowDebugger.getSuccessCutoff());
-        runner.assertValid();
-        runner.run();
-        assertEquals(context.getProperty(FlowDebugger.SUCCESS_PERCENT).asInteger().intValue(),
-                flowDebugger.getSuccessCutoff());
-    }
-
-    @Test
-    public void testFlowfileRollback() throws IOException {
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "0");
-        runner.setProperty(FlowDebugger.FAILURE_PERCENT, "0");
-        runner.setProperty(FlowDebugger.YIELD_PERCENT, "0");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "100");
-        runner.setProperty(FlowDebugger.PENALIZE_PERCENT, "0");
-        runner.assertValid();
-
-        Map<String, String> attribs1 = new HashMap<>();
-        final String content1 = "Hello, World 1!";
-        final String filename1 = "testFile1.txt";
         attribs1.put(CoreAttributes.FILENAME.key(), filename1);
         attribs1.put(CoreAttributes.UUID.key(), "TESTING-1234-TESTING");
-        runner.enqueue(content1.getBytes(), attribs1);
 
-        Map<String, String> attribs2 = new HashMap<>();
-        final String content2 = "Hello, World 2!";
-        final String filename2 = "testFile2.txt";
         attribs2.put(CoreAttributes.FILENAME.key(), filename2);
         attribs2.put(CoreAttributes.UUID.key(), "TESTING-2345-TESTING");
-        runner.enqueue(content2, attribs2);
 
-        Map<String, String> attribs3 = new HashMap<>();
-        final String content3 = "Hello, World 3!";
-        final String filename3 = "testFile3.txt";
         attribs1.put(CoreAttributes.FILENAME.key(), filename3);
         attribs3.put(CoreAttributes.UUID.key(), "TESTING-3456-TESTING");
-        runner.enqueue(content3.getBytes(), attribs3);
 
-        Map<String, String> namesToContent = new HashMap<>();
         namesToContent.put(filename1, content1);
         namesToContent.put(filename2, content2);
         namesToContent.put(filename3, content3);
 
-        runner.run(4);
-        runner.assertTransferCount(FlowDebugger.REL_SUCCESS, 0);
-        runner.assertTransferCount(FlowDebugger.REL_FAILURE, 0);
+        // by default flowfiles go to success
+        runner.setProperty(FlowDebugger.FF_SUCCESS_ITERATIONS, "1");
+        runner.setProperty(FlowDebugger.FF_FAILURE_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_YIELD_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_PENALTY_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_EXCEPTION_ITERATIONS, "0");
 
-        runner.assertQueueNotEmpty();
-        assertEquals(3, runner.getQueueSize().getObjectCount());
+        // by default if triggered without flowfile nothing happens
+        runner.setProperty(FlowDebugger.NO_FF_EXCEPTION_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.NO_FF_YIELD_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.NO_FF_SKIP_ITERATIONS, "1");
+    }
 
-        MockFlowFile ff1 = (MockFlowFile)session.get();
-        assertNotNull(ff1);
-        assertEquals(namesToContent.get(ff1.getAttribute(CoreAttributes.FILENAME.key())), new String(ff1.toByteArray()));
-        session.rollback();
+    @Test
+    public void testGetSupportedPropertyDescriptors() throws Exception {
+        assertEquals(9, flowDebugger.getPropertyDescriptors().size());
+    }
 
-        runner.setProperty(FlowDebugger.SUCCESS_PERCENT, "100");
-        runner.setProperty(FlowDebugger.ROLLBACK_PERCENT, "0");
+    @Test
+    public void testGetRelationships() throws Exception {
+        assertEquals(2, flowDebugger.getRelationships().size());
+    }
+
+    @Test
+    public void testOnScheduled() throws Exception {
+        // should be 0 until @OnScheduled
+        assertEquals(0L, flowDebugger.getSuccessMax());
+        
+        runner.assertValid();
+        runner.run();
+        assertEquals(context.getProperty(FlowDebugger.FF_SUCCESS_ITERATIONS).asInteger().intValue(),
+                flowDebugger.getSuccessMax());
+    }
+
+    @Test
+    public void testSuccess() {
+        runner.assertValid();
+
+        runner.enqueue(content1.getBytes(), attribs1);
+        runner.enqueue(content2.getBytes(), attribs2);
+        runner.enqueue(content3.getBytes(), attribs3);
+
         runner.run(4);
         runner.assertTransferCount(FlowDebugger.REL_SUCCESS, 3);
         runner.assertTransferCount(FlowDebugger.REL_FAILURE, 0);
@@ -248,21 +123,116 @@ public class TestFlowDebugger {
         runner.getFlowFilesForRelationship(FlowDebugger.REL_SUCCESS).get(2).assertContentEquals(content3);
     }
 
+    @Test
+    public void testFailure() {
+        runner.setProperty(FlowDebugger.FF_SUCCESS_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_FAILURE_ITERATIONS, "1");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_YIELD_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_PENALTY_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_EXCEPTION_ITERATIONS, "0");
+        runner.assertValid();
+
+        runner.enqueue(content1.getBytes(), attribs1);
+        runner.enqueue(content2.getBytes(), attribs2);
+        runner.enqueue(content3.getBytes(), attribs3);
+
+        runner.run(4);
+        runner.assertTransferCount(FlowDebugger.REL_SUCCESS, 0);
+        runner.assertTransferCount(FlowDebugger.REL_FAILURE, 3);
+
+        runner.getFlowFilesForRelationship(FlowDebugger.REL_FAILURE).get(0).assertContentEquals(content1);
+        runner.getFlowFilesForRelationship(FlowDebugger.REL_FAILURE).get(1).assertContentEquals(content2);
+        runner.getFlowFilesForRelationship(FlowDebugger.REL_FAILURE).get(2).assertContentEquals(content3);
+    }
+
+    @Test
+    public void testSuccessAndFailure() {
+        runner.setProperty(FlowDebugger.FF_SUCCESS_ITERATIONS, "1");
+        runner.setProperty(FlowDebugger.FF_FAILURE_ITERATIONS, "1");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_YIELD_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_PENALTY_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_EXCEPTION_ITERATIONS, "0");
+        runner.assertValid();
+
+        runner.enqueue(content1.getBytes(), attribs1);
+        runner.enqueue(content2.getBytes(), attribs2);
+        runner.enqueue(content3.getBytes(), attribs3);
+
+        runner.run(4);
+        runner.assertTransferCount(FlowDebugger.REL_SUCCESS, 2);
+        runner.assertTransferCount(FlowDebugger.REL_FAILURE, 1);
+
+        runner.getFlowFilesForRelationship(FlowDebugger.REL_SUCCESS).get(0).assertContentEquals(content1);
+        runner.getFlowFilesForRelationship(FlowDebugger.REL_SUCCESS).get(1).assertContentEquals(content3);
+        runner.getFlowFilesForRelationship(FlowDebugger.REL_FAILURE).get(0).assertContentEquals(content2);
+    }
+
+    @Test
+    public void testYield() {
+        runner.setProperty(FlowDebugger.FF_SUCCESS_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_FAILURE_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_YIELD_ITERATIONS, "1");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_PENALTY_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_EXCEPTION_ITERATIONS, "0");
+        runner.assertValid();
+
+        runner.enqueue(content1.getBytes(), attribs1);
+        runner.enqueue(content2.getBytes(), attribs2);
+        runner.enqueue(content3.getBytes(), attribs3);
+
+        runner.run(4);
+        runner.assertTransferCount(FlowDebugger.REL_SUCCESS, 0);
+        runner.assertTransferCount(FlowDebugger.REL_FAILURE, 0);
+
+        runner.assertQueueNotEmpty();
+        assertEquals(3, runner.getQueueSize().getObjectCount());
+    }
+
+    @Test
+    public void testRollback() throws IOException {
+        runner.setProperty(FlowDebugger.FF_SUCCESS_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_FAILURE_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_ITERATIONS, "1");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_YIELD_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_ROLLBACK_PENALTY_ITERATIONS, "0");
+        runner.setProperty(FlowDebugger.FF_EXCEPTION_ITERATIONS, "0");
+        runner.assertValid();
+
+        runner.enqueue(content1.getBytes(), attribs1);
+        runner.enqueue(content2.getBytes(), attribs2);
+        runner.enqueue(content3.getBytes(), attribs3);
+
+        runner.run(4);
+        runner.assertTransferCount(FlowDebugger.REL_SUCCESS, 0);
+        runner.assertTransferCount(FlowDebugger.REL_FAILURE, 0);
+
+        runner.assertQueueNotEmpty();
+        assertEquals(3, runner.getQueueSize().getObjectCount());
+
+        MockFlowFile ff1 = (MockFlowFile) session.get();
+        assertNotNull(ff1);
+        assertEquals(namesToContent.get(ff1.getAttribute(CoreAttributes.FILENAME.key())), new String(ff1.toByteArray()));
+        session.rollback();
+    }
+
     private class FlowDebuggerInspectable extends FlowDebugger {
-        public int getSuccessCutoff() {
-            return this.SUCCESS_CUTOFF;
+        public int getSuccessMax() {
+            return this.FF_SUCCESS_MAX;
         }
 
-        public int getFailureCutoff() {
-            return this.FAILURE_CUTOFF;
+        public int getFailureMax() {
+            return this.FF_FAILURE_MAX;
         }
 
-        public int getYieldCutoff() {
-            return this.YIELD_CUTOFF;
+        public int getYieldMax() {
+            return this.FF_YIELD_MAX;
         }
 
-        public int getRollbackCutoff() {
-            return this.ROLLBACK_CUTOFF;
+        public int getRollbackMax() {
+            return this.FF_ROLLBACK_MAX;
         }
     }
 }
