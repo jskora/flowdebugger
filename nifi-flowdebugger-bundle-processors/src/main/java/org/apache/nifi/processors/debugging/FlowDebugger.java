@@ -36,7 +36,7 @@ import org.apache.nifi.processor.util.StandardValidators;
 import java.util.*;
 
 @EventDriven()
-@Tags({"example"})
+@Tags({"test", "debug", "processor", "utility", "flow", "flowfile"})
 @CapabilityDescription("This processor aids in the testing and debugging of the flowfile framework by allowing "
         + "a developer or flow manager to force various responses to a flowfile.  In response to a received flowfile "
         + "it can route to a success or failure relationship, yield, rollback without penalty, rollback with penalty, "
