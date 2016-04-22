@@ -17,7 +17,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>jfskora.scratch</groupId>
+        <groupId>org.apache.nifi</groupId>
         <artifactId>flowdebugger-bundle</artifactId>
         <version>0.1-SNAPSHOT</version>
     </parent>
@@ -32,7 +32,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>jfskora.scratch</groupId>
+            <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-flowdebugger-bundle-processors</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>
