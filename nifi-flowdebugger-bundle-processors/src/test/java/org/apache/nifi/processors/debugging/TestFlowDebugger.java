@@ -222,17 +222,5 @@ public class TestFlowDebugger {
         public int getSuccessMax() {
             return this.FF_SUCCESS_MAX;
         }
-
-        public int getFailureMax() {
-            return this.FF_FAILURE_MAX;
-        }
-
-        public int getYieldMax() {
-            return this.FF_YIELD_MAX;
-        }
-
-        public int getRollbackMax() {
-            return this.FF_ROLLBACK_MAX;
-        }
     }
 }
