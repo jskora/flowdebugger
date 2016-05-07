@@ -22,13 +22,8 @@ import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.logging.ProcessorLog;
 import org.apache.nifi.processor.*;
-import org.apache.nifi.annotation.behavior.ReadsAttribute;
-import org.apache.nifi.annotation.behavior.ReadsAttributes;
-import org.apache.nifi.annotation.behavior.WritesAttribute;
-import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
-import org.apache.nifi.annotation.documentation.SeeAlso;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
@@ -38,84 +33,84 @@ import java.util.*;
 @EventDriven()
 @Tags({"test", "debug", "processor", "utility", "flow", "flowfile"})
 @CapabilityDescription("This processor aids in the testing and debugging of the flowfile framework by allowing "
-        + "a developer or flow manager to force various responses to a flowfile.  In response to a received flowfile "
-        + "it can route to a success or failure relationship, yield, rollback without penalty, rollback with penalty, "
-        + "or throw an exception.  In addition, if using a timer based scheduling strategy it can be configured to "
-        + "throw an exception when triggered without a flowfile."
+        + "a developer or flow manager to force various responses to a flowfile.  In response to a receiving a flowfile "
+        + "it can route to the success or failure relationships, rollback, rollback and yield, rollback with penalty, "
+        + "or throw an exception.  In addition, if using a timer based scheduling strategy, upon being triggered without "
+        + "a flowfile, it can be configured to throw an exception,  when triggered without a flowfile.\n"
         + "\n"
-        + "The count properties, such as \"Success count\", configure how many times each response should occur "
-        + "in succession before moving on to the next response.  The responses when a flow file is received occur in "
-        + "this order:"
-        + "  1. transfer flowfile to success relationship,\n"
-        + "  2. transfer flowfile to failure relationship,\n"
-        + "  3. rollback the flowfile without penalty,\n"
-        + "  4. rollback the flowfile without penalty, and\n"
-        + "  5. throw an NPE exception with a flowfile.\n"
+        + "The 'iterations' properties, such as \"Success iterations\", configure how many times each response should occur "
+        + "in succession before moving on to the next response within the group of flowfile responses or no flowfile"
+        + "responses.\n"
         + "\n"
-        + "The responses when no flow file is received occur in this order:"
-        + "  1. yield the context, and\n"
-        + "  2. throw an NPE exception.\n"
+        + "The order of responses when a flow file is received are:"
+        + "  1. transfer flowfile to success relationship.\n"
+        + "  2. transfer flowfile to failure relationship.\n"
+        + "  3. rollback the flowfile without penalty.\n"
+        + "  4. rollback the flowfile and yield the context.\n"
+        + "  5. rollback the flowfile with penalty.\n"
+        + "  6. throw an exception.\n"
         + "\n"
-        + "By default, the processor is configured to perform each response one time.  After cycling through each "
-        + "response, the processor will return to the beginning of the list and repeat the responses.  The responses "
-        + "with a flowfile will occur before the responses without a flowfile.\n"
+        + "The order of responses when no flow file is received are:"
+        + "  1. yield the context.\n"
+        + "  2. throw an exception.\n"
+        + "  3. do nothing and return.\n"
+        + "\n"
+        + "By default, the processor is configured to perform each response one time.  After processing the list of "
+        + "responses it will resume from the top of the list.\n"
         + "\n"
         + "To suppress any response, it's value can be set to zero (0) and no responses of that type will occur during "
         + "processing.")
-@SeeAlso({})
-@ReadsAttributes({@ReadsAttribute(attribute="", description="")})
-@WritesAttributes({@WritesAttribute(attribute="", description="")})
 public class FlowDebugger extends AbstractProcessor {
 
     private Set<Relationship> relationships = null;
 
-    public static final Relationship REL_SUCCESS = new Relationship.Builder()
+    static final Relationship REL_SUCCESS = new Relationship.Builder()
             .name("success")
             .description("Flowfiles processed successfully.")
             .build();
-    public static final Relationship REL_FAILURE = new Relationship.Builder()
+    static final Relationship REL_FAILURE = new Relationship.Builder()
             .name("failure")
             .description("Flowfiles that failed to process.")
             .build();
 
     private List<PropertyDescriptor> propertyDescriptors = null;
 
-    public static final PropertyDescriptor FF_SUCCESS_ITERATIONS = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor FF_SUCCESS_ITERATIONS = new PropertyDescriptor.Builder()
             .name("Success Iterations")
             .description("Number of flowfiles to forward to success relationship.")
             .required(true)
             .defaultValue("1")
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
-    public static final PropertyDescriptor FF_FAILURE_ITERATIONS = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor FF_FAILURE_ITERATIONS = new PropertyDescriptor.Builder()
             .name("Failure Iterations")
             .description("Number of flowfiles to forward to failure relationship.")
             .required(true)
             .defaultValue("0")
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
-    public static final PropertyDescriptor FF_ROLLBACK_ITERATIONS = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor FF_ROLLBACK_ITERATIONS = new PropertyDescriptor.Builder()
             .name("Rollback Iterations")
             .description("Number of flowfiles to roll back (without penalty).")
             .required(true)
             .defaultValue("0")
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
-    public static final PropertyDescriptor FF_ROLLBACK_YIELD_ITERATIONS = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor FF_ROLLBACK_YIELD_ITERATIONS = new PropertyDescriptor.Builder()
             .name("Rollback Yield Iterations")
             .description("Number of flowfiles to roll back and yield.")
             .required(true)
             .defaultValue("0")
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
-    public static final PropertyDescriptor FF_ROLLBACK_PENALTY_ITERATIONS = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor FF_ROLLBACK_PENALTY_ITERATIONS = new PropertyDescriptor.Builder()
             .name("Rollback Penalty Iterations")
             .description("Number of flowfiles to roll back with penalty.")
             .required(true)
             .defaultValue("0")
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
-    public static final PropertyDescriptor FF_EXCEPTION_ITERATIONS = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor FF_EXCEPTION_ITERATIONS = new PropertyDescriptor.Builder()
             .name("Exception Iterations")
             .description("Number of flowfiles to throw NPE exception.")
             .required(true)
@@ -123,21 +118,21 @@ public class FlowDebugger extends AbstractProcessor {
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
 
-    public static final PropertyDescriptor NO_FF_EXCEPTION_ITERATIONS = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor NO_FF_EXCEPTION_ITERATIONS = new PropertyDescriptor.Builder()
             .name("No Flowfile Exception Iterations")
             .description("Number of times to throw NPE exception if no flowfile.")
             .required(true)
             .defaultValue("0")
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
-    public static final PropertyDescriptor NO_FF_YIELD_ITERATIONS = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor NO_FF_YIELD_ITERATIONS = new PropertyDescriptor.Builder()
             .name("No Flowfile Yield Iterations")
             .description("Number of times to yield if no flowfile.")
             .required(true)
             .defaultValue("0")
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
-    public static final PropertyDescriptor NO_FF_SKIP_ITERATIONS = new PropertyDescriptor.Builder()
+    static final PropertyDescriptor NO_FF_SKIP_ITERATIONS = new PropertyDescriptor.Builder()
             .name("No Flowfile Skip Iterations")
             .description("Number of times to skip onTrigger if no flowfile.")
             .required(true)
@@ -145,16 +140,16 @@ public class FlowDebugger extends AbstractProcessor {
             .addValidator(StandardValidators.NON_NEGATIVE_INTEGER_VALIDATOR)
             .build();
 
-    protected Integer FF_SUCCESS_MAX = 0;
-    protected Integer FF_FAILURE_MAX = 0;
-    protected Integer FF_ROLLBACK_MAX = 0;
-    protected Integer FF_YIELD_MAX = 0;
-    protected Integer FF_PENALTY_MAX = 0;
-    protected Integer FF_EXCEPTION_MAX = 0;
+    Integer FF_SUCCESS_MAX = 0;
+    Integer FF_FAILURE_MAX = 0;
+    Integer FF_ROLLBACK_MAX = 0;
+    Integer FF_YIELD_MAX = 0;
+    private Integer FF_PENALTY_MAX = 0;
+    private Integer FF_EXCEPTION_MAX = 0;
 
-    protected Integer NO_FF_EXCEPTION_MAX = 0;
-    protected Integer NO_FF_YIELD_MAX = 0;
-    protected Integer NO_FF_SKIP_MAX = 0;
+    private Integer NO_FF_EXCEPTION_MAX = 0;
+    private Integer NO_FF_YIELD_MAX = 0;
+    private Integer NO_FF_SKIP_MAX = 0;
 
     private Integer FF_SUCCESS_CURR = 0;
     private Integer FF_FAILURE_CURR = 0;
@@ -170,7 +165,7 @@ public class FlowDebugger extends AbstractProcessor {
     private FlowfileResponse curr_ff_resp;
     private NoFlowfileResponse curr_noff_resp;
 
-    enum FlowfileResponse {
+    private enum FlowfileResponse {
         FF_SUCCESS_RESPONSE(0, 1),
         FF_FAILURE_RESPONSE(1, 2),
         FF_ROLLBACK_RESPONSE(2, 3),
@@ -202,7 +197,7 @@ public class FlowDebugger extends AbstractProcessor {
         }
     }
 
-    enum NoFlowfileResponse {
+    private enum NoFlowfileResponse {
         NO_FF_EXCEPTION_RESPONSE(0, 1),
         NO_FF_YIELD_RESPONSE(1, 2),
         NO_FF_SKIP_RESPONSE(2, 0);
@@ -260,6 +255,7 @@ public class FlowDebugger extends AbstractProcessor {
         return propertyDescriptors;
     }
 
+    @SuppressWarnings("unused")
     @OnScheduled
     public void onScheduled(ProcessContext context) {
         FF_SUCCESS_MAX = context.getProperty(FF_SUCCESS_ITERATIONS).asInteger();
@@ -278,7 +274,6 @@ public class FlowDebugger extends AbstractProcessor {
     @Override
     public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
         final ProcessorLog logger = getLogger();
-        final int i = (int)(Math.random() * 100.0);
 
         FlowFile ff = session.get();
 
