@@ -96,10 +96,8 @@ public class TestFlowDebugger {
     }
 
     @Test
-    public void testOnScheduled() throws Exception {
-        // should be 0 until @OnScheduled
+    public void testSuccessMaxIsZeroUntilOnScheduled() throws Exception {
         assertEquals(0L, flowDebugger.getSuccessMax());
-        
         runner.assertValid();
         runner.run();
         assertEquals(context.getProperty(FlowDebugger.FF_SUCCESS_ITERATIONS).asInteger().intValue(),
@@ -221,18 +219,6 @@ public class TestFlowDebugger {
     private class FlowDebuggerInspectable extends FlowDebugger {
         public int getSuccessMax() {
             return this.FF_SUCCESS_MAX;
-        }
-
-        public int getFailureMax() {
-            return this.FF_FAILURE_MAX;
-        }
-
-        public int getYieldMax() {
-            return this.FF_YIELD_MAX;
-        }
-
-        public int getRollbackMax() {
-            return this.FF_ROLLBACK_MAX;
         }
     }
 }
